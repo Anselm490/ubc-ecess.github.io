@@ -7,7 +7,7 @@ import {
   photo,
   boot,
   paintIcons,
-} from "../app.js?version=7";
+} from "../app.js?version=8";
 
 // Physical MCLD Banks: 2 Rows, Evens on Top, Odds on Bottom, Higher Numbers on the Left
 const LOCKER_SECTIONS = {

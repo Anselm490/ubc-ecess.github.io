@@ -30,8 +30,7 @@ function syncLockersToDB() {
     const privateDoc = SpreadsheetApp.openById(LOCKER_SHEET_ID);
     const privateSheet = privateDoc.getSheetByName("Main");
     if (!privateSheet) {
-      Logger.log("ERROR: No `Main` Sheet in Private Locker Management Spreadsheet");
-      return;
+      throw new Error("Locker Spreadsheet Has No Sheet Named Main.");
     }
 
     const range = privateSheet.getDataRange();
@@ -42,8 +41,7 @@ function syncLockersToDB() {
     const statusIndex = headers.indexOf("status");
 
     if (lockerIndex === -1 || statusIndex === -1) {
-      Logger.log("ERROR: Missing 'locker' or 'status' column in private sheet");
-      return;
+      throw new Error("Private Locker Sheet Missing A Locker or Status Column.");
     }
 
     const transformedData = [["Set", "Number", "Taken"]];
@@ -66,19 +64,17 @@ function syncLockersToDB() {
     const publicDoc = SpreadsheetApp.openById(DB_SHEET_ID);
     const publicSheet = publicDoc.getSheetByName("Lockers");
     if (!publicSheet) {
-      Logger.log("ERROR: No `Lockers` Sheet in Website Database");
-      return;
+      throw new Error("Website dB Has No Sheet Named Lockers.");
     }
 
     publicSheet.clearContents();
     publicSheet.getRange(1, 1, transformedData.length, 3).setValues(transformedData);
 
-    Logger.log(`✓ Sync Completed Successfully at ${new Date()}`);
-    Logger.log(`✓ Transformed ${transformedData.length - 1} lockers`);
+    Logger.log(`✓ Sync Completed Successfully At ${new Date()}`);
+    Logger.log(`✓ Transformed ${transformedData.length - 1} Lockers`);
 
   } catch (error) {
-    Logger.log(`✗ Sync Failed: ${error.message}`);
-    sendErrorNotification(error);
+    reportSyncError("Locker Sync", error);
   }
 }
 
@@ -122,7 +118,7 @@ function installLockerSyncTrigger() {
     Logger.log("✓ syncLockersToDB() Will Run Automatically Every 24 Hours and on Edit");
 
   } catch (error) {
-    Logger.log(`✗ Trigger Installation Failed: ${error.message}`);
+    reportSyncError("Locker Sync Trigger Setup", error);
   }
 }
 
@@ -141,23 +137,7 @@ function removeLockerSyncTrigger() {
     Logger.log("✓ Trigger Removed - Automatic Sync Disabled");
 
   } catch (error) {
-    Logger.log(`✗ Failed to Remove Trigger: ${error.message}`);
-  }
-}
-
-/*
- * Sends Error Notification (Optional - Requires Email Setup)
- */
-function sendErrorNotification(error) {
-  try {
-    const email = Session.getEffectiveUser().getEmail();
-    MailApp.sendEmail(
-      email,
-      "ECESS Locker Sync Error",
-      `Locker Sync Failed:\n\n${error.message}\n\nCheck Apps Script Logs for Details.`
-    );
-  } catch (e) {
-    Logger.log("Could Not Send Error Email: " + e.message);
+    reportSyncError("Locker Sync Trigger Removal", error);
   }
 }
 

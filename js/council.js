@@ -17,7 +17,7 @@ import {
   wireIcons,
   boot,
   CONFIG,
-} from "../app.js?version=7";
+} from "../app.js?version=8";
 import { startContactForm } from "./contact.js?version=12";
 
 function councilYears() {

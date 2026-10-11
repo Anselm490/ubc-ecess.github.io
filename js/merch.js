@@ -6,7 +6,7 @@ import {
   photo,
   paintIcons,
   boot,
-} from "../app.js?version=7";
+} from "../app.js?version=8";
 
 function stockList(row) {
   const raw = field(row, "stock");
