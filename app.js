@@ -31,7 +31,7 @@ const NAV_LINKS = [
   { label: "Careers", href: "./careers" },
   { label: "Merch", href: "./merch" },
   { label: "Lockers", href: "./lockers" },
-  { label: "Council", href: "./council" },
+  { label: "Contact", href: "./contact" },
 ];
 
 const page = document.querySelector("body");

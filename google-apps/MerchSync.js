@@ -29,8 +29,7 @@ function syncMerchToDB() {
     const privateDoc = SpreadsheetApp.openById(MERCH_SHEET_ID);
     const privateSheet = privateDoc.getSheetByName("Summary");
     if (!privateSheet) {
-      Logger.log("ERROR: No `Summary` Sheet in Private Merch Management Spreadsheet");
-      return;
+      throw new Error("Private Merch Spreadsheet Has No Sheet Named Summary.");
     }
 
     const range = privateSheet.getDataRange();
@@ -41,8 +40,7 @@ function syncMerchToDB() {
     const remainingIndex = headers.indexOf("Quantity Remaining");
 
     if (itemIndex === -1 || remainingIndex === -1) {
-      Logger.log("ERROR: Missing 'Item' or 'Quantity Remaining' column in private sheet");
-      return;
+      throw new Error("Private Merch Sheet Missing An Item or Quantity Remaining Column.");
     }
 
     const stockByItem = {};
@@ -74,8 +72,7 @@ function syncMerchToDB() {
     const publicDoc = SpreadsheetApp.openById(DB_SHEET_ID);
     const publicSheet = publicDoc.getSheetByName("Merch");
     if (!publicSheet) {
-      Logger.log("ERROR: No `Merch` Sheet in Website Database");
-      return;
+      throw new Error("The website database has no sheet named Merch.");
     }
 
     const publicRange = publicSheet.getDataRange();
@@ -87,8 +84,7 @@ function syncMerchToDB() {
     const stockIndex = publicHeaders.indexOf("Stock");
 
     if (publicItemIndex === -1 || stockIndex === -1) {
-      Logger.log("ERROR: Missing 'Item' or 'Stock' column in public sheet");
-      return;
+      throw new Error("Public Merch Sheet Missing An Item or Stock Column.");
     }
 
     const stockUpdates = [];
@@ -135,12 +131,11 @@ function syncMerchToDB() {
 
     publicSheet.getRange(2, stockIndex + 1, stockUpdates.length, 1).setValues(stockUpdates);
 
-    Logger.log(`✓ Sync Completed Successfully at ${new Date()}`);
-    Logger.log(`✓ Updated ${updatedCount} merch items`);
+    Logger.log(`✓ Sync Completed Successfully At ${new Date()}`);
+    Logger.log(`✓ Updated ${updatedCount} Merch Items`);
 
   } catch (error) {
-    Logger.log(`✗ Sync Failed: ${error.message}`);
-    sendErrorNotification(error);
+    reportSyncError("Merch Sync", error);
   }
 }
 
@@ -163,7 +158,7 @@ function installMerchSyncTrigger() {
     Logger.log("✓ syncMerchToDB() Will Run Automatically Every 24 Hours");
 
   } catch (error) {
-    Logger.log(`✗ Trigger Installation Failed: ${error.message}`);
+    reportSyncError("Merch Sync Trigger Setup", error);
   }
 }
 
@@ -181,23 +176,7 @@ function removeMerchSyncTrigger() {
     Logger.log("✓ Trigger Removed - Automatic Sync Disabled");
 
   } catch (error) {
-    Logger.log(`✗ Failed to Remove Trigger: ${error.message}`);
-  }
-}
-
-/*
- * Sends Error Notification (Optional - Requires Email Setup)
- */
-function sendErrorNotification(error) {
-  try {
-    const email = Session.getEffectiveUser().getEmail();
-    MailApp.sendEmail(
-      email,
-      "ECESS Merch Sync Error",
-      `Merch Sync Failed:\n\n${error.message}\n\nCheck Apps Script Logs for Details.`
-    );
-  } catch (e) {
-    Logger.log("Could Not Send Error Email: " + e.message);
+    reportSyncError("Merch Sync Trigger Removal", error);
   }
 }
 

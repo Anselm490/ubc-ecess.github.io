@@ -17,7 +17,7 @@ import {
   wireIcons,
   boot,
   CONFIG,
-} from "../app.js?version=7";
+} from "../app.js?version=8";
 
 /*
  * Add/Remove Entries to Update Alumni Marquee

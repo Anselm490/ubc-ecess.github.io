@@ -36,8 +36,7 @@ function syncCalendarToDB() {
     const publicDoc = SpreadsheetApp.openById(DB_SHEET_ID);
     const eventsSheet = publicDoc.getSheetByName("Events");
     if (!eventsSheet) {
-      Logger.log("ERROR: No `Events` Sheet in Website Database");
-      return;
+      throw new Error("Website dB Has No Sheet Named Events.");
     }
 
     const values = eventsSheet.getRange(1, 1, eventsSheet.getLastRow(), eventsSheet.getLastColumn()).getValues(); // Read All Data
@@ -64,14 +63,12 @@ function syncCalendarToDB() {
       locationIndex === -1 ||
       showIndex === -1
     ) {
-      Logger.log("ERROR: Missing 1+ Required Columns in `Events` Sheet");
-      return;
+      throw new Error("Events Sheet Missing One of These Columns: Date, Start, End, Name, Location, Calendar link, Show.");
     }
 
     const calendar = CalendarApp.getCalendarById(CALENDAR_ID);
     if (!calendar) {
-      Logger.log("ERROR: Unable to Access Calendar with ID " + CALENDAR_ID);
-      return;
+      throw new Error("Could Not Open the ECESS Calendar " + CALENDAR_ID + ".");
     }
 
     const today = new Date();
@@ -127,8 +124,7 @@ function syncCalendarToDB() {
     Logger.log("✓ Processed " + upcomingEvents.length + " Upcoming Event(s)");
 
   } catch (error) {
-    Logger.log("✗ Sync Failed: " + error.message);
-    sendCalendarErrorNotification(error);
+    reportSyncError("Calendar Sync", error);
   }
 }
 
@@ -587,7 +583,7 @@ function installCalendarSyncTrigger() {
     Logger.log("✓ syncCalendarToDB() Will Run Automatically Every 24 Hours");
 
   } catch (error) {
-    Logger.log("✗ Trigger Installation Failed: " + error.message);
+    reportSyncError("Calendar Sync Trigger Setup", error);
   }
 }
 
@@ -606,23 +602,7 @@ function removeCalendarSyncTrigger() {
     Logger.log("✓ Trigger Removed - Automatic Sync Disabled");
 
   } catch (error) {
-    Logger.log("✗ Failed to Remove Trigger: " + error.message);
-  }
-}
-
-/*
- * Sends Error Notification (Optional - Requires Email Setup)
- */
-function sendCalendarErrorNotification(error) {
-  try {
-    const email = Session.getEffectiveUser().getEmail();
-    MailApp.sendEmail(
-      email,
-      "ECESS Calendar Sync Error",
-      "Calendar Sync Failed:\n\n" + error.message + "\n\nCheck Apps Script Logs for Details."
-    );
-  } catch (e) {
-    Logger.log("Could Not Send Error Email: " + e.message);
+    reportSyncError("Calendar Sync Trigger Removal", error);
   }
 }
 

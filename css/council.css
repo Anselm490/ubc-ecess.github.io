@@ -8,6 +8,14 @@
 	margin: 0.75rem auto 0;
 }
 
+#council-page > #contact {
+	margin-top: calc(var(--bar-height) + 1.25rem);
+}
+
+#council-page .section-header {
+	margin-top: 1.75rem;
+}
+
 #council-page #contact {
 	padding: 1.15rem 1.35rem 1.25rem;
 	background: hsl(202, 38%, 96%);

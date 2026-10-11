@@ -79,9 +79,9 @@ npm install
 npm run dev
 ```
 
-**4. Open [http://localhost:5173](http://localhost:5173).**
+**4. Open [http://localhost:8080](http://localhost:8080).**
 
-Page HTML lives in `pages/`. The dev server still opens each one at a short URL: `/`, `/events`, `/courses`, and so on. The server stays on port 5173.
+Page HTML lives in `pages/`. The dev server still opens each one at a short URL: `/`, `/events`, `/courses`, and so on. The server stays on port 8080.
 
 To check the production build:
 

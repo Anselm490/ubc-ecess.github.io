@@ -15,7 +15,7 @@ import {
   wireIcons,
   boot,
   CONFIG,
-} from "../app.js?version=7";
+} from "../app.js?version=8";
 import { listUpcoming } from "./events.js?version=10";
 function buildShortcuts() {
   let html = "";
