@@ -1,19 +1,39 @@
-// Illustrative PUBLIC-ONLY data. Never put private budgets, identities or tokens in frontend code.
-const sample = {
-  summary: {budget: 50000,spent: 19250,committed: 6250},
-  portfolios: [
-    {name:'Events',budget:18000,spent:7500},
-    {name:'Academic',budget:12000,spent:4200},
-    {name:'Social',budget:10000,spent:3900},
-    {name:'Operations',budget:10000,spent:3650}
-  ],
-  events:[{name:'Welcome Event',portfolio:'Events',status:'Finalized',spent:1750},{name:'Technical Workshop',portfolio:'Academic',status:'Finalized',spent:800}],
-  reports:[]
-};
-const money = n => new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(n);
-const content=document.getElementById('content');
-function item(label,detail){const row=document.createElement('div');row.className='item';const name=document.createElement('strong');name.textContent=label;const info=document.createElement('span');info.className='muted';info.textContent=detail;row.append(name,info);return row}
-function panel(title){const box=document.createElement('section');box.className='card panel';const heading=document.createElement('h2');heading.textContent=title;box.append(heading);return box}
-function overview(){const s=sample.summary;const grid=document.createElement('div');grid.className='grid';for(const [label,value] of [['Published budget',s.budget],['Spent',s.spent],['Committed',s.committed],['Remaining',s.budget-s.spent-s.committed]]){const box=document.createElement('div');box.className='card';const a=document.createElement('div');a.className='label';a.textContent=label;const b=document.createElement('div');b.className='amount';b.textContent=money(value);box.append(a,b);grid.append(box)}content.append(grid);const box=panel('Budget utilization');const track=document.createElement('div');track.className='track';const fill=document.createElement('div');fill.className='fill';fill.style.width=`${Math.min(100,s.spent/s.budget*100)}%`;track.append(fill);box.append(track,item('Spent proportion',`${Math.round(s.spent/s.budget*100)}%`));content.append(box)}
-function render(view){content.replaceChildren();if(view==='overview'){overview();return}if(view==='portfolios'){const box=panel('Published portfolio summaries');sample.portfolios.forEach(p=>box.append(item(p.name,`${money(p.spent)} spent / ${money(p.budget)} allocated`)));content.append(box);return}if(view==='events'){const box=panel('Published event summaries');sample.events.filter(e=>e.status==='Finalized').forEach(e=>box.append(item(e.name,`${e.portfolio} · ${money(e.spent)}`)));content.append(box);return}const box=panel('Published reports');const msg=document.createElement('p');msg.className='empty';msg.textContent='No approved reports have been published in this prototype.';box.append(msg);content.append(box)}
+// PHASE 2 DEMO: synthetic data only. No actual ECESS amounts, names, or private records.
+// The shapes below mirror Master Budget (portfolio allocations) and Expenses
+// (separate Portfolio, Event, Purchase, Amount fields).
+const demoBudget = [
+  {portfolio:'Administration',allocated:7000},
+  {portfolio:'Academic',allocated:6000},
+  {portfolio:'Student Life',allocated:6500},
+  {portfolio:'External',allocated:8500}
+];
+const demoExpenses = [
+  {id:'DEMO-001',portfolio:'Administration',event:'Lounge',purchase:'Room supplies',amount:240},
+  {id:'DEMO-002',portfolio:'Administration',event:'Lounge',purchase:'Equipment',amount:460},
+  {id:'DEMO-003',portfolio:'Academic',event:'Workshop',purchase:'Materials',amount:375},
+  {id:'DEMO-004',portfolio:'Academic',event:'Workshop',purchase:'Refreshments',amount:125},
+  {id:'DEMO-005',portfolio:'Student Life',event:'Welcome Event',purchase:'Venue booking',amount:1200},
+  {id:'DEMO-006',portfolio:'Student Life',event:'Welcome Event',purchase:'Decorations',amount:300},
+  {id:'DEMO-007',portfolio:'External',event:'Industry Mixer',purchase:'Catering',amount:950},
+  {id:'DEMO-008',portfolio:'External',event:'Industry Mixer',purchase:'Printing',amount:150}
+];
+const money = n => new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD'}).format(n);
+const content = document.getElementById('content');
+const sum = rows => rows.reduce((total,row)=>total+row.amount,0);
+const portfolios = demoBudget.map(p=>({...p,spent:sum(demoExpenses.filter(e=>e.portfolio===p.portfolio))}));
+const totalBudget=portfolios.reduce((a,p)=>a+p.allocated,0);
+const totalSpent=sum(demoExpenses);
+function el(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x}
+function panel(title){const x=el('section','card panel');x.append(el('h2','',title));return x}
+function row(label,detail){const x=el('div','item');x.append(el('strong','',label),el('span','muted',detail));return x}
+function cards(entries){const g=el('div','grid');for(const [label,value] of entries){const c=el('div','card');c.append(el('div','label',label),el('div','amount',money(value)));g.append(c)}content.append(g)}
+function overview(){cards([['Allocated budget',totalBudget],['Recorded expenses',totalSpent],['Remaining budget',totalBudget-totalSpent],['Events with expenses',new Set(demoExpenses.map(e=>e.portfolio+'|'+e.event)).size]]);
+  // The last metric is a count, not a currency amount.
+  const last=content.querySelector('.grid .card:last-child .amount');last.textContent=String(new Set(demoExpenses.map(e=>e.portfolio+'|'+e.event)).size);
+  const box=panel('How the numbers connect');box.append(row('Master Budget → Allocated',money(totalBudget)),row('Expenses → Recorded spending',money(totalSpent)),row('Calculated → Remaining',money(totalBudget-totalSpent)));box.append(el('p','muted','Demo calculation: remaining = allocated − recorded expenses. Commitments and revenue are not included in this preview.'));content.append(box);
+  const p=panel('Portfolio breakdown');portfolios.forEach(x=>p.append(row(x.portfolio,`${money(x.spent)} spent · ${money(x.allocated-x.spent)} remaining`)));content.append(p)}
+function portfolioView(){const p=panel('Select a portfolio');const selector=el('select','finance-select');selector.setAttribute('aria-label','Portfolio');demoBudget.forEach(x=>{const o=el('option','',x.portfolio);o.value=x.portfolio;selector.append(o)});p.append(selector);const detail=el('div');p.append(detail);function update(){detail.replaceChildren();const x=portfolios.find(y=>y.portfolio===selector.value);detail.append(row('Allocated budget',money(x.allocated)),row('Recorded expenses',money(x.spent)),row('Remaining budget',money(x.allocated-x.spent)));const events=[...new Set(demoExpenses.filter(e=>e.portfolio===x.portfolio).map(e=>e.event))];for(const name of events){const items=demoExpenses.filter(e=>e.portfolio===x.portfolio&&e.event===name);detail.append(row(name,`${items.length} transactions · ${money(sum(items))}`))}}selector.addEventListener('change',update);update();content.append(p)}
+function eventView(){const p=panel('Event expenses (demo)');const groups=new Map();for(const x of demoExpenses){const k=x.portfolio+' / '+x.event;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)}for(const [key,items] of groups){const section=el('details','event-detail');const summary=el('summary','',`${key} — ${money(sum(items))}`);section.append(summary);items.forEach(e=>section.append(row(e.purchase,`${e.id} · ${money(e.amount)}`)));p.append(section)}content.append(p)}
+function reports(){const p=panel('Published reports');p.append(el('p','muted','No approved public reports are connected. This preview uses synthetic data only.'));content.append(p)}
+function render(view){content.replaceChildren();({overview,portfolios:portfolioView,events:eventView,reports}[view]||overview)()}
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b===button));render(button.dataset.view)}));render('overview');
