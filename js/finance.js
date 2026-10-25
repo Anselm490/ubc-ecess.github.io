@@ -1,13 +1,13 @@
 // PHASE 2 DEMO: synthetic data only. No actual ECESS amounts, names, or private records.
 // The shapes below mirror Master Budget (portfolio allocations) and Expenses
 // (separate Portfolio, Event, Purchase, Amount fields).
-const demoBudget = [
+let demoBudget = [
   {portfolio:'Administration',allocated:7000},
   {portfolio:'Academic',allocated:6000},
   {portfolio:'Student Life',allocated:6500},
   {portfolio:'External',allocated:8500}
 ];
-const demoExpenses = [
+let demoExpenses = [
   {id:'DEMO-001',portfolio:'Administration',event:'Lounge',purchase:'Room supplies',amount:240},
   {id:'DEMO-002',portfolio:'Administration',event:'Lounge',purchase:'Equipment',amount:460},
   {id:'DEMO-003',portfolio:'Academic',event:'Workshop',purchase:'Materials',amount:375},
@@ -20,9 +20,11 @@ const demoExpenses = [
 const money = n => new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD'}).format(n);
 const content = document.getElementById('content');
 const sum = rows => rows.reduce((total,row)=>total+row.amount,0);
-const portfolios = demoBudget.map(p=>({...p,spent:sum(demoExpenses.filter(e=>e.portfolio===p.portfolio))}));
-const totalBudget=portfolios.reduce((a,p)=>a+p.allocated,0);
-const totalSpent=sum(demoExpenses);
+let portfolios = [];
+let totalBudget = 0;
+let totalSpent = 0;
+function recalculate(){portfolios=demoBudget.map(p=>({...p,spent:sum(demoExpenses.filter(e=>e.portfolio===p.portfolio))}));totalBudget=portfolios.reduce((a,p)=>a+p.allocated,0);totalSpent=sum(demoExpenses)}
+recalculate();
 function el(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x}
 function panel(title){const x=el('section','card panel');x.append(el('h2','',title));return x}
 function row(label,detail){const x=el('div','item');x.append(el('strong','',label),el('span','muted',detail));return x}
@@ -36,4 +38,33 @@ function portfolioView(){const p=panel('Select a portfolio');const selector=el('
 function eventView(){const p=panel('Event expenses (demo)');const groups=new Map();for(const x of demoExpenses){const k=x.portfolio+' / '+x.event;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)}for(const [key,items] of groups){const section=el('details','event-detail');const summary=el('summary','',`${key} — ${money(sum(items))}`);section.append(summary);items.forEach(e=>section.append(row(e.purchase,`${e.id} · ${money(e.amount)}`)));p.append(section)}content.append(p)}
 function reports(){const p=panel('Published reports');p.append(el('p','muted','No approved public reports are connected. This preview uses synthetic data only.'));content.append(p)}
 function render(view){content.replaceChildren();({overview,portfolios:portfolioView,events:eventView,reports}[view]||overview)()}
-document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b===button));render(button.dataset.view)}));render('overview');
+let activeView='overview';
+const refreshButton=document.getElementById('refresh-data');
+const syncStatus=document.getElementById('sync-status');
+// Leave blank for synthetic local demo. Only use an Apps Script endpoint that returns
+// approved, non-sensitive public data. Never paste a private sheet URL or API key here.
+const DATA_ENDPOINT = "https://script.google.com/macros/s/AKfycbybwljYPkbWXv6HnSfSeSjsizsNMKleDfrHzlitms_COKcSWRYo_oWcnpfXq_OFjZ-uGw/exec";
+function validatePayload(payload){
+  if(!payload||payload.visibility!=='public-demo'||!Array.isArray(payload.budgets)||!Array.isArray(payload.expenses))throw new Error('Unexpected or unapproved data format');
+  if(payload.budgets.length>500||payload.expenses.length>10000)throw new Error('Dataset exceeds preview limits');
+  const budgets=payload.budgets.map(p=>{if(typeof p.portfolio!=='string'||!p.portfolio.trim()||!Number.isFinite(p.allocated)||p.allocated<0)throw new Error('Invalid budget');return {portfolio:p.portfolio,allocated:p.allocated}});
+  const expenses=payload.expenses.map(e=>{if(!['id','portfolio','event','purchase'].every(k=>typeof e[k]==='string')||!Number.isFinite(e.amount)||e.amount<0)throw new Error('Invalid expense');return {id:e.id,portfolio:e.portfolio,event:e.event,purchase:e.purchase,amount:e.amount}});
+  return {budgets,expenses};
+}
+async function refreshData(){
+  if(!DATA_ENDPOINT){syncStatus.textContent='Local fictional data · No endpoint configured';return}
+  refreshButton.disabled=true;syncStatus.textContent='Updating…';
+  try{
+    const url=new URL(DATA_ENDPOINT);url.searchParams.set('cacheBust',String(Date.now()));
+    const response=await fetch(url.toString(),{cache:'no-store',redirect:'follow'});
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const payload=validatePayload(await response.json());
+    demoBudget=payload.budgets;demoExpenses=payload.expenses;recalculate();render(activeView);
+    syncStatus.textContent='Last updated: '+new Date().toLocaleString('en-CA');
+  }catch(error){console.error('Finance data refresh failed:',error);syncStatus.textContent='Update failed · Showing last successfully loaded data';}
+  finally{refreshButton.disabled=false}
+}
+document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{activeView=button.dataset.view;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b===button));render(activeView)}));
+refreshButton.addEventListener('click',refreshData);
+render(activeView);
+refreshData();
