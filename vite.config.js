@@ -14,6 +14,7 @@ const pages = [
   "leaderboard",
   "discord",
   "linkedin",
+  "finance",
 ];
 
 function toPageFile(url) {
